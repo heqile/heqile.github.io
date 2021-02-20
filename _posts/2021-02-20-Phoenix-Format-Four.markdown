@@ -4,7 +4,6 @@ title:  "Phoenix Format Four"
 date:   2021-02-20 11:00:00 +0000
 categories: ExploitEducation
 ---
-# Phoenix Four
 ## Description:
 Challange [Link](https://exploit.education/phoenix/format-four/) (arch: amd64)
 ```c
