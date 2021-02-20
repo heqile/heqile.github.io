@@ -4,7 +4,7 @@ title:  "Phoenix Format Three"
 date:   2021-02-14 14:00:00 +0000
 categories: ExploitEducation
 ---
-# Phoenix
+# Phoenix Three
 ## Description:
 Challange [Link](https://exploit.education/phoenix/format-three/) (arch: amd64)
 ```c
