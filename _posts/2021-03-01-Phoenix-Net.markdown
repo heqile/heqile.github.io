@@ -62,7 +62,8 @@ int main(int argc, char **argv) {
 ```python
 from pwn import *
 
-p = process("/opt/phoenix/amd64/net-zero")
+#p = process("/opt/phoenix/amd64/net-zero")
+p = remote("localhost", 64000)
 
 print(p.recvline())
 line = p.recvline()
@@ -74,6 +75,94 @@ p.sendline(input_value)
 p.interactive()
 ```
 
-## Reflection
-p32 / u32 - p64 / u64
+## After thought
+pack vs unpack [from python3 doc](https://docs.python.org/3/library/struct.html)
+```
+ By default, the result of packing a given C struct includes pad bytes in order to maintain proper alignment for the C types involved; similarly, alignment is taken into account when unpacking. This behavior is chosen so that the bytes of a packed struct correspond exactly to the layout in memory of the corresponding C struct. To handle platform-independent data formats or omit implicit pad bytes, use standard size and alignment instead of native size and alignment: see Byte Order, Size, and Alignment for details.
+ ```
+
+
+# Net One
+## Description
+
+Link [https://exploit.education/phoenix/net-one/](https://exploit.education/phoenix/net-one/)
+```c
+/*
+ * phoenix/net-one, by https://exploit.education
+ *
+ * Why aren't octal jokes funny?
+ * Because 7 10 11
+ */
+
+#include <err.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/random.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define BANNER \
+  "Welcome to " LEVELNAME ", brought to you by https://exploit.education"
+
+int main(int argc, char **argv) {
+  uint32_t i;
+  char buf[12], fub[12], *q;
+
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
+  printf("%s\n", BANNER);
+
+  if (getrandom((void *)&i, sizeof(i), 0) != sizeof(i)) {
+    errx(1, "unable to getrandom(%d bytes)", sizeof(i));
+  }
+
+  if (write(1, &i, sizeof(i)) != sizeof(i)) {
+    errx(1, "unable to write %d bytes", sizeof(i));
+  }
+
+  if (fgets(buf, sizeof(buf), stdin) == NULL) {
+    errx(1, "who knew that reading from stdin could be so difficult");
+  }
+  buf[sizeof(buf) - 1] = 0;
+
+  q = strchr(buf, '\r');
+  if (q) *q = 0;
+  q = strchr(buf, '\n');
+  if (q) *q = 0;
+
+  sprintf(fub, "%u", i);
+  if (strcmp(fub, buf) == 0) {
+    printf("Congratulations, you've passed this level!\n");
+  } else {
+    printf("Close, you sent \"%s\", and we wanted \"%s\"\n", buf, fub);
+  }
+
+  return 0;
+}
+```
+
+## Analyse
+1. The random generated value is printed by `write()` in format of string, so we need to unpack the printed string into the original int number.
+
+## Solution
+```python
+from pwn import *
+
+#p = process("/opt/phoenix/amd64/net-one")
+p = remote("localhost", 64001)
+print(p.recvline())
+request_value = p.recv()
+print(request_value)
+
+unpackaged = str(u32(request_value))
+p.sendline(unpackaged)
+
+p.interactive()
+```
+
+## After thought
+pack vs unpack
+
 
