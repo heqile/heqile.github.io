@@ -255,13 +255,14 @@ p.interactive()
 
 ## After thought
 1. in the little endian arch, the string is save as follow:
+
 ```
 to save "ABCD" in memory
 
 high address  ->  low address
 | 0x44 | 0x43 | 0x42 | 0x41 |
-
 ```
+
 how unpackage works:
 ```
 def unpackage(s):
@@ -270,6 +271,7 @@ def unpackage(s):
         o = hex(ord(i))[2:] + o
     return int(o, 16)
 ```
+
 how package():
 ```
 def package(n):
