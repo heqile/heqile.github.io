@@ -166,3 +166,122 @@ p.interactive()
 pack vs unpack
 
 
+# Net Two
+## Description
+Link [https://exploit.education/phoenix/net-two/](https://exploit.education/phoenix/net-two/)
+```c
+/*
+ * phoenix/net-two, by https://exploit.education
+ *
+ * Shout out to anyone who doesn't know what the opposite of in is.
+ *
+ */
+
+#include <err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/random.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define BANNER \
+  "Welcome to " LEVELNAME ", brought to you by https://exploit.education"
+
+int main(int argc, char **argv) {
+  int i;
+  unsigned long quad[sizeof(long)], result, wanted;
+
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
+  printf("%s\nFor this level, sizeof(long) == %d, keep that in mind :)\n",
+      BANNER, (int)sizeof(long));
+
+  if (getrandom((void *)&quad, sizeof(quad), 0) != sizeof(quad)) {
+    errx(1, "unable to getrandom(%d bytes)", sizeof(quad));
+  }
+
+  result = 0;
+  for (i = 0; i < sizeof(long); i++) {
+    result += quad[i];
+    if (write(1, (void *)&quad[i], sizeof(long)) != sizeof(long)) {
+      errx(1, "Why have you foresaken me, write()");
+    }
+  }
+
+  if (read(0, (void *)&wanted, sizeof(long)) != sizeof(long)) {
+    errx(1, "Unable to read\n");
+  }
+
+  if (result == wanted) {
+    printf("You have successfully passed this level, well done!\n");
+  } else {
+    printf("Whoops, better luck next time. Receieved %lu, wanted %lu\n", wanted,
+        result);
+  }
+
+  return 0;
+}
+```
+
+## Analyse
+1. `(void *)` is 8 bytes, `unsigned long` is 8 bytes. The sum of 8 `unsigned long` number will greater than 8 bytes, we need to take exactly 8 bytes from the sum.
+
+## Solution
+```python
+from pwn import *
+
+# !! sizeof(long) == 8
+
+#p = process("/opt/phoenix/amd64/net-two")
+p = remote("localhost", 64002)
+
+print(p.recvline())
+print(p.recvline())
+request_value = p.recv()
+
+# request value length == 64 (bytes), each element has 64 / 8 = 8 bytes
+#print("request value length:" + str(len(request_value)))
+
+result = 0
+for i in range(8):
+    chunk = request_value[i*8 : (i+1)*8]
+    result += u64(chunk)
+
+p.send(p64(int(hex(result)[-16:], 16)))
+print(p.recvline())
+p.interactive()
+```
+
+## After thought
+1. in the little endian arch, the string is save as follow:
+```
+to save "ABCD" in memory
+
+high address  ->  low address
+| 0x44 | 0x43 | 0x42 | 0x41 |
+
+```
+how unpackage works:
+```
+def unpackage(s):
+    o = ""
+    for i in s:
+        o = hex(ord(i))[2:] + o
+    return int(o, 16)
+```
+how package():
+```
+def package(n):
+    o = ""
+    h = hex(n)[2:]
+    while len(h) > 0:
+        if len(h) >= 2:
+            t = h[-2:]
+            h = h[:-2]
+        else:
+            t = h
+            h = ""
+        o += chr(int(t, 16))
+    return o
+```
