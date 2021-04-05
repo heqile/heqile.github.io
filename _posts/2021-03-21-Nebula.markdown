@@ -376,3 +376,35 @@ You have successfully executed getflag on a target account
 ## After thought
 1. in the view of attacker, the `.backup` dir is worth to check; the in view of user, take care of the all backup files.
 
+# Level 06
+## Description
+
+Link [https://exploit.education/nebula/level-06/](https://exploit.education/nebula/level-06/)
+```
+The flag06 account credentials came from a legacy unix system.
+
+To do this level, log in as the level06 account with the password level06. Files for this level can be found in /home/flag06.
+```
+
+## Analyse
+1. As said in the description, the user came from a legacy unix system, the the passwor's hash is stored in `passwd`.
+2. To crack it, we can use `john` or some online tools
+
+## Solution
+```bash
+level06@nebula:/home/flag06$ cat /etc/passwd | grep flag06
+flag06:ueqwOCnSGdsuM:993:993::/home/flag06:/bin/sh
+
+ueqwOCnSGdsuM -> hello
+
+level06@nebula:/home/flag06$ su flag06
+Password: 
+sh-4.2$ id
+uid=993(flag06) gid=993(flag06) groups=993(flag06)
+sh-4.2$ getflag
+You have successfully executed getflag on a target account
+```
+
+## After thought
+1. Avoid to use legacy unix passwd, it is easy to crack. 
+
