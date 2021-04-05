@@ -461,3 +461,25 @@ ping(param("Host"));
 
 ## After thought
 1. Don't trust any user input! Do verification before process user input!
+
+
+# Level 08
+## Description
+
+Link [https://exploit.education/nebula/level-08/](https://exploit.education/nebula/level-08/)
+```
+World readable files strike again. Check what that user was up to, and use it to log into flag08 account.
+
+To do this level, log in as the level08 account with the password level08. Files for this level can be found in /home/flag08.
+```
+
+## Analyse
+1. In the dir `/home/flag`, there is a file `capture.pcap`, we can use `wireshark` to parse it.
+2. We can find a line indicate to input `password`, and follows the user input, which are `b a c k d o o r 0x7f 0x7f 0 0 R m 8 0x7f a t e`. The `0x7f` means `DEL`, so the password is `backd00Rmate`, use it to `su flag08`
+
+
+## Solution
+1. as describe in analyse
+
+## After thought
+1. Using `wireshark` to analyze tcpdump file is much easier to `tcpdump` command
